@@ -15,54 +15,30 @@ export default function({ types: t }) {
     visitor: {
 
       Identifier(path) {
-        if (path.node.name === 'window') {
-          let parent = lookup(path);
-          parent.insertBefore(
-            t.binaryExpression(
-              '!==',
-              t.unaryExpression(
-                'typeof',
-                t.identifier('wefewf')
-              ),
-              t.stringLiteral('undefined')
-            )
-          );
-/*
-          path.parentPath.replaceWith(
-            t.expressionStatement(
-              t.logicalExpression(
-                '&&',
-                t.stringLiteral('worms'),
-                t.stringLiteral('cans')
-              )
-            )
-          );
 
-          /*
-          path.replaceWith(
-            t.expressionStatement(
+        const node = path.node;
+
+        if (node.name === 'window' && !node.visited) {
+          let parent = lookup(path);
+          if (parent) {
+            let identifier = t.identifier(node.name);
+            identifier.visited = true;
+            parent.replaceWith(
               t.logicalExpression(
                 '&&',
-                t.stringLiteral('worms'),
-                t.identifier('cans')
+                t.binaryExpression(
+                  '!==',
+                  t.unaryExpression(
+                    'typeof',
+                    identifier
+                  ),
+                  t.stringLiteral('undefined')
+                ),
+                parent.node.expression
               )
-            )
-          )
-          */
-          
-          /*
-          path.replaceWith(
-            t.binaryExpression(
-              '!==',
-              t.unaryExpression(
-                'typeof',
-                t.identifier(path.node.name)
-              ),
-              t.stringLiteral('undefined')
-            )
-          );
-          path.stop();
-          */
+            );
+            node.visited = true;
+          }
         }
       }
 
