@@ -1,11 +1,35 @@
 export default function({ types: t }) {
 
+  const wrappers = {
+
+    ExpressionStatement(name, path) {
+      path.replaceWith(
+        buildGuardExpression(name, path.node.expression)
+      );
+    },
+
+    UnaryExpression(name, path) {
+      path.replaceWith(
+        buildGuardExpression(name, path.node)
+      );
+    },
+
+    VariableDeclarator(name, path) {
+      path.replaceWith(
+        t.VariableDeclarator(
+          path.node.id,
+          buildGuardExpression(name, path.node.init)
+        )
+      );
+    }
+
+  };
+
+  const lookupTargets = Object.keys(wrappers);
+
   // if logic for now, will clean up later.
   function lookup(path) {
-    if (path.node.type === 'ExpressionStatement') {
-      return path;
-    }
-    else if (path.node.type === 'VariableDeclarator') {
+    if (lookupTargets.indexOf(path.node.type) !== -1) {
       return path;
     }
     else if (path.parentPath) {
@@ -55,32 +79,13 @@ export default function({ types: t }) {
 
         const node = path.node;
 
+        // Need to check for more than just 'window'
         if (node.name === 'window' && !node.visited) {
+
           let parent = lookup(path);
 
-          if (parent) {
-
-            // if logic for now, will clean up later.
-            if (parent.type === 'ExpressionStatement') {
-              parent.replaceWith(
-                buildGuardExpression(
-                  node.name,
-                  parent.node.expression
-                )
-              );
-            }
-            else if (parent.type === 'VariableDeclarator') {
-              parent.replaceWith(
-                t.VariableDeclarator(
-                  parent.node.id,
-                  buildGuardExpression(
-                    node.name,
-                    parent.node.init
-                  )
-                )
-              );
-            }
-
+          if (parent && wrappers[parent.type]) {
+            wrappers[parent.type](node.name, parent);
             setVisited(node);
           }
         }
