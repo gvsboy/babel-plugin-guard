@@ -25,10 +25,6 @@ function getExpected(fixture) {
 
 describe('babel-plugin-guard', () => {
 
-  it('works!', () => {
-    expect(true).to.be.ok;
-  });
-
   describe('transformations', () => {
     fs.readdirSync(fixturesDir).forEach((fixture) => {
       it(`correctly matches ${fixture} to it's expected source`, () => {

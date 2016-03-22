@@ -1,1 +1,1 @@
-foo === bar;
+window.location.origin;
