@@ -16,9 +16,19 @@ export default function({ types: t }) {
 
     VariableDeclarator(name, path) {
       path.replaceWith(
-        t.VariableDeclarator(
+        t.variableDeclarator(
           path.node.id,
           buildGuardExpression(name, path.node.init)
+        )
+      );
+    },
+
+    BinaryExpression(name, path) {
+      path.replaceWith(
+        t.binaryExpression(
+          path.node.operator,
+          buildGuardExpression(name, path.node.left),
+          path.node.right
         )
       );
     }
