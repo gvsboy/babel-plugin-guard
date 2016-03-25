@@ -31,6 +31,15 @@ export default function({ types: t }) {
           path.node.right
         )
       );
+    },
+
+    ObjectProperty(name, path) {
+      path.replaceWith(
+        t.objectProperty(
+          path.node.key,
+          buildGuardExpression(name, path.node.value)
+        )
+      )
     }
 
   };
