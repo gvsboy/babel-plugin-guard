@@ -1,3 +1,3 @@
 if (!window.opener) {
-  let foo = "bar";
+  var foo = "bar";
 }
