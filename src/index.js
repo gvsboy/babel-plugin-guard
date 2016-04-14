@@ -25,11 +25,7 @@ export default function({ types: t }) {
 
     BinaryExpression(name, path) {
       path.replaceWith(
-        t.binaryExpression(
-          path.node.operator,
-          buildGuardExpression(name, path.node.left),
-          path.node.right
-        )
+        buildGuardExpression(name, path.node)
       );
     },
 
@@ -45,28 +41,6 @@ export default function({ types: t }) {
   };
 
   const lookupTargets = Object.keys(wrappers);
-
-  // if logic for now, will clean up later.
-  function lookup(path) {
-    if (lookupTargets.indexOf(path.node.type) !== -1) {
-      return path;
-    }
-    else if (path.parentPath) {
-      return lookup(path.parentPath);
-    }
-    return null;
-  }
-
-  function setVisited(node) {
-    node.visited = true;
-    return node;
-  }
-
-  function buildVisitedIndentifier(name) {
-    return setVisited(
-      t.identifier(name)
-    );
-  }
 
   /**
    * Wraps a given node in a logical expression to gate against undeclared identifiers.
@@ -87,6 +61,28 @@ export default function({ types: t }) {
         t.stringLiteral('undefined')
       ),
       node
+    );
+  }
+
+  // if logic for now, will clean up later.
+  function lookup(path) {
+    if (lookupTargets.indexOf(path.node.type) !== -1) {
+      return path;
+    }
+    else if (path.parentPath) {
+      return lookup(path.parentPath);
+    }
+    return null;
+  }
+
+  function setVisited(node) {
+    node.visited = true;
+    return node;
+  }
+
+  function buildVisitedIndentifier(name) {
+    return setVisited(
+      t.identifier(name)
     );
   }
 

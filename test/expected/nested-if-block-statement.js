@@ -1,3 +1,3 @@
-if ((typeof window !== "undefined" && window.name) !== page.name) {
+if (typeof window !== "undefined" && window.name !== page.name) {
   typeof window !== "undefined" && (window.name = page.name);
 }

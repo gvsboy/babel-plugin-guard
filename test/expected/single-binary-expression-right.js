@@ -1,3 +1,3 @@
-if ((typeof window !== "undefined" && page.origin) === window.location.origin) {
+if (typeof window !== "undefined" && page.origin === window.location.origin) {
   page.same = true;
 }

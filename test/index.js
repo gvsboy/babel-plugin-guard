@@ -11,7 +11,9 @@ const plugin = path.join(rootDir, '../src');
 // To test only one fixture, set a 'fixture' environment variable
 // when invocating the test runner.
 // E.g. fixture=single-in-object npm test
-const envFixture = process.env.fixture ? `${process.env.fixture}.js` : null;
+//   or f=single-in-object npm test
+const fixtureEnv = process.env.fixture || process.env.f;
+const envFixture = fixtureEnv ? `${fixtureEnv}.js` : null;
 
 function transform(fixture) {
   const file = path.join(fixturesDir, fixture);

@@ -1,1 +1,1 @@
-var hasTouch = (typeof window !== "undefined" && "ontouchstart" in window);
+var hasTouch = typeof window !== "undefined" && "ontouchstart" in window;
