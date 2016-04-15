@@ -1,6 +1,29 @@
 export default function({ types: t }) {
 
-  const wrappers = {
+  const primaryWrappers = {
+
+    IfStatement(name, path) {
+      let node = path.node;
+      if (!node.visited) {
+        path.replaceWith(
+          t.ifStatement(
+            buildGuardExpression(name, node.test),
+            node.consequent,
+            node.alternate
+          )
+        );
+        setVisited(path.node);
+      }
+      return true;
+    },
+
+    BlockStatement() {
+      return false;
+    }
+
+  };
+
+  const secondaryWrappers = {
 
     ExpressionStatement(name, path) {
       path.replaceWith(
@@ -40,8 +63,6 @@ export default function({ types: t }) {
 
   };
 
-  const lookupTargets = Object.keys(wrappers);
-
   /**
    * Wraps a given node in a logical expression to gate against undeclared identifiers.
    * @param {String} name The identifier name to gate against.
@@ -65,12 +86,12 @@ export default function({ types: t }) {
   }
 
   // if logic for now, will clean up later.
-  function lookup(path) {
-    if (lookupTargets.indexOf(path.node.type) !== -1) {
+  function lookup(path, targets) {
+    if (targets.indexOf(path.node.type) !== -1) {
       return path;
     }
     else if (path.parentPath) {
-      return lookup(path.parentPath);
+      return lookup(path.parentPath, targets);
     }
     return null;
   }
@@ -97,11 +118,21 @@ export default function({ types: t }) {
         // Need to check for more than just 'window'
         if (node.name === 'window' && !node.visited) {
 
-          let parent = lookup(path);
+          let stopParent = lookup(path, Object.keys(primaryWrappers));
+          let result = null;
 
-          if (parent && wrappers[parent.type]) {
-            wrappers[parent.type](node.name, parent);
+          if (stopParent && primaryWrappers[stopParent.type]) {
+            result = primaryWrappers[stopParent.type](node.name, stopParent);
             setVisited(node);
+          }
+
+          if (!result) {
+            let parent = lookup(path, Object.keys(secondaryWrappers));
+
+            if (parent && secondaryWrappers[parent.type]) {
+              secondaryWrappers[parent.type](node.name, parent);
+              setVisited(node);
+            }
           }
         }
       }
