@@ -17,6 +17,8 @@ export default function({ types: t }) {
       return true;
     },
 
+    // Do nothing, continuing the search.
+    // Blocks are complex and we don't want the search to bleed elsewhere (like an IfStatement).
     BlockStatement() {
       return false;
     }
@@ -29,12 +31,14 @@ export default function({ types: t }) {
       path.replaceWith(
         buildGuardExpression(name, path.node.expression)
       );
+      return true;
     },
 
     UnaryExpression(name, path) {
       path.replaceWith(
         buildGuardExpression(name, path.node)
       );
+      return true;
     },
 
     VariableDeclarator(name, path) {
@@ -44,12 +48,14 @@ export default function({ types: t }) {
           buildGuardExpression(name, path.node.init)
         )
       );
+      return true;
     },
 
     BinaryExpression(name, path) {
       path.replaceWith(
         buildGuardExpression(name, path.node)
       );
+      return true;
     },
 
     ObjectProperty(name, path) {
@@ -58,7 +64,8 @@ export default function({ types: t }) {
           path.node.key,
           buildGuardExpression(name, path.node.value)
         )
-      )
+      );
+      return true;
     }
 
   };
@@ -85,7 +92,6 @@ export default function({ types: t }) {
     );
   }
 
-  // if logic for now, will clean up later.
   function lookup(path, targets) {
     if (targets.indexOf(path.node.type) !== -1) {
       return path;
@@ -107,32 +113,32 @@ export default function({ types: t }) {
     );
   }
 
+  /**
+   * Attempts to wrap a path segment with gating logic depending on the
+   * node types to check against. If the path's node matches a valid node,
+   * wrap it with gating logic.
+   * @param {Object} path An AST path between two nodes
+   * @param {Object} wrapperMap The wrapper types to validate against.
+   * @return {Boolean} Was a wrapper found and, if so, does it dictate we continue the search?
+   */
+  function wrap(path, wrapperMap) {
+    let parent = lookup(path, Object.keys(wrapperMap));
+    if (parent) {
+      setVisited(path.node);
+      return wrapperMap[parent.type](path.node.name, parent);
+    }
+    return false;
+  }
+
   return {
 
     visitor: {
 
+      // Need to check for more than just 'window'
       Identifier(path) {
-
-        const node = path.node;
-
-        // Need to check for more than just 'window'
-        if (node.name === 'window' && !node.visited) {
-
-          let stopParent = lookup(path, Object.keys(primaryWrappers));
-          let result = null;
-
-          if (stopParent && primaryWrappers[stopParent.type]) {
-            result = primaryWrappers[stopParent.type](node.name, stopParent);
-            setVisited(node);
-          }
-
-          if (!result) {
-            let parent = lookup(path, Object.keys(secondaryWrappers));
-
-            if (parent && secondaryWrappers[parent.type]) {
-              secondaryWrappers[parent.type](node.name, parent);
-              setVisited(node);
-            }
+        if (path.node.name === 'window' && !path.node.visited) {
+          if (!wrap(path, primaryWrappers)) {
+            wrap(path, secondaryWrappers);
           }
         }
       }
