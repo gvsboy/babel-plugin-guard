@@ -6,7 +6,8 @@
   "scripts": {
     "build": "babel src -d lib",
     "test": "mocha --compilers js:babel-core/register",
-    "test-debug": "mocha debug --compilers js:babel-core/register"
+    "test-debug": "mocha debug --compilers js:babel-core/register",
+    "sandbox": "babel test/sandbox/in -d test/sandbox/out --plugins=../../../lib --compact=false"
   },
   "author": "Kevin Mikles <gvsboy@gmail.com>",
   "license": "ISC",
