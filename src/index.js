@@ -1,5 +1,10 @@
 export default function({ types: t }) {
 
+  const defaultIdentifiers = [
+    'window',
+    'document'
+  ];
+
   const primaryWrappers = {
 
     IfStatement(name, path) {
@@ -130,13 +135,17 @@ export default function({ types: t }) {
     return false;
   }
 
+  function matches(path, identifiers = defaultIdentifiers) {
+    return identifiers.indexOf(path.node.name) !== -1;
+  }
+
   return {
 
     visitor: {
 
       // Need to check for more than just 'window'
-      Identifier(path) {
-        if (path.node.name === 'window' && !path.node.visited) {
+      Identifier(path, state) {
+        if (matches(path, state.opts.identifiers) && !path.node.visited) {
           if (!wrap(path, primaryWrappers)) {
             wrap(path, secondaryWrappers);
           }

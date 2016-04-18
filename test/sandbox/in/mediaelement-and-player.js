@@ -4290,7 +4290,7 @@ if (typeof jQuery != 'undefined') {
 
                 if (hideTimeout !== null) {
                   clearTimeout(hideTimeout);
-                  // KEVdelete hideTimeout;
+                  //delete hideTimeout;
                 }
 
                 hideTimeout = setTimeout(function() {

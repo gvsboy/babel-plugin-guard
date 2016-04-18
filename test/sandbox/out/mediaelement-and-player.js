@@ -42,7 +42,7 @@ mejs.Utility = {
     return s.toString().split('&').join('&amp;').split('<').join('&lt;').split('"').join('&quot;');
   },
   absolutizeUrl: function (url) {
-    var el = document.createElement('div');
+    var el = typeof document !== 'undefined' && document.createElement('div');
     el.innerHTML = '<a href="' + this.escapeHTML(url) + '">x</a>';
     return el.firstChild.href;
   },
@@ -56,7 +56,7 @@ mejs.Utility = {
         scriptUrl,
         scriptPath,
         scriptFilename,
-        scripts = document.getElementsByTagName('script'),
+        scripts = typeof document !== 'undefined' && document.getElementsByTagName('script'),
         il = scripts.length,
         jl = scriptNames.length;
 
@@ -154,7 +154,7 @@ mejs.Utility = {
 
   /* borrowed from SWFObject: http://code.google.com/p/swfobject/source/browse/trunk/swfobject/src/swfobject.js#474 */
   removeSwf: function (id) {
-    var obj = document.getElementById(id);
+    var obj = typeof document !== 'undefined' && document.getElementById(id);
     if (obj && /object|embed/i.test(obj.nodeName)) {
       if (mejs.MediaFeatures.isIE) {
         obj.style.display = "none";
@@ -171,7 +171,7 @@ mejs.Utility = {
     }
   },
   removeObjectInIE: function (id) {
-    var obj = document.getElementById(id);
+    var obj = typeof document !== 'undefined' && document.getElementById(id);
     if (obj) {
       for (var i in obj) {
         if (typeof obj[i] == "function") {
@@ -288,10 +288,11 @@ PluginDetector.addPlugin('acrobat','Adobe Acrobat','application/pdf','AcroPDF.PD
 mejs.MediaFeatures = {
   init: function () {
     var t = this,
-        d = document,
+        d = typeof document !== 'undefined' && document,
         nav = mejs.PluginDetector.nav,
-        ua = mejs.PluginDetector.ua.toLowerCase(),
-        i,
+        ua = "",
+        //mejs.PluginDetector.ua.toLowerCase(),
+    i,
         v,
         html5Elements = ['source', 'track', 'audio', 'video'];
 
@@ -312,11 +313,11 @@ mejs.MediaFeatures = {
     t.hasTouch = typeof window !== 'undefined' && 'ontouchstart' in window; //  && window.ontouchstart != null); // this breaks iOS 7
 
     // borrowed from Modernizr
-    t.svg = !!document.createElementNS && !!document.createElementNS('http://www.w3.org/2000/svg', 'svg').createSVGRect;
+    t.svg = !(typeof document !== 'undefined' && !document.createElementNS) && !(typeof document !== 'undefined' && !document.createElementNS('http://www.w3.org/2000/svg', 'svg').createSVGRect);
 
     // create HTML5 media elements for IE before 9, get a <video> element for fullscreen detection
     for (i = 0; i < html5Elements.length; i++) {
-      v = document.createElement(html5Elements[i]);
+      typeof document !== 'undefined' && (v = document.createElement(html5Elements[i]));
     }
 
     t.supportsMediaTag = typeof v.canPlayType !== 'undefined' || t.isBustedAndroid;
@@ -346,9 +347,9 @@ mejs.MediaFeatures = {
 
     // Enabled?
     if (t.hasMozNativeFullScreen) {
-      t.nativeFullScreenEnabled = document.mozFullScreenEnabled;
+      typeof document !== 'undefined' && (t.nativeFullScreenEnabled = document.mozFullScreenEnabled);
     } else if (t.hasMsNativeFullScreen) {
-      t.nativeFullScreenEnabled = document.msFullscreenEnabled;
+      typeof document !== 'undefined' && (t.nativeFullScreenEnabled = document.msFullscreenEnabled);
     }
 
     if (t.isChrome) {
@@ -389,11 +390,11 @@ mejs.MediaFeatures = {
 
       t.cancelFullScreen = function () {
         if (t.hasWebkitNativeFullScreen) {
-          document.webkitCancelFullScreen();
+          typeof document !== 'undefined' && document.webkitCancelFullScreen();
         } else if (t.hasMozNativeFullScreen) {
-          document.mozCancelFullScreen();
+          typeof document !== 'undefined' && document.mozCancelFullScreen();
         } else if (t.hasMsNativeFullScreen) {
-          document.msExitFullscreen();
+          typeof document !== 'undefined' && document.msExitFullscreen();
         }
       };
     }
@@ -757,10 +758,12 @@ mejs.MediaPluginBridge = {
       // find the javascript bridge
       switch (pluginMediaElement.pluginType) {
         case "flash":
-          pluginMediaElement.pluginElement = pluginMediaElement.pluginApi = document.getElementById(id);
+          typeof document !== 'undefined' && (pluginMediaElement.pluginElement = pluginMediaElement.pluginApi = document.getElementById(id));
+
           break;
         case "silverlight":
-          pluginMediaElement.pluginElement = document.getElementById(pluginMediaElement.id);
+          typeof document !== 'undefined' && (pluginMediaElement.pluginElement = document.getElementById(pluginMediaElement.id));
+
           pluginMediaElement.pluginApi = pluginMediaElement.pluginElement.Content.MediaElementJS;
           break;
       }
@@ -878,7 +881,7 @@ mejs.HtmlMediaElementShim = {
 
   create: function (el, o) {
     var options = mejs.MediaElementDefaults,
-        htmlMediaElement = typeof el == 'string' ? document.getElementById(el) : el,
+        htmlMediaElement = typeof document !== 'undefined' && (typeof el == 'string' ? document.getElementById(el) : el),
         tagName = htmlMediaElement.tagName.toLowerCase(),
         isMediaTag = tagName === 'audio' || tagName === 'video',
         src = isMediaTag ? htmlMediaElement.getAttribute('src') : htmlMediaElement.getAttribute('href'),
@@ -1008,7 +1011,8 @@ mejs.HtmlMediaElementShim = {
       if (!isMediaTag) {
 
         // create a real HTML5 Media Element
-        dummy = document.createElement(result.isVideo ? 'video' : 'audio');
+        typeof document !== 'undefined' && (dummy = document.createElement(result.isVideo ? 'video' : 'audio'));
+
         htmlMediaElement.parentNode.insertBefore(dummy, htmlMediaElement);
         htmlMediaElement.style.display = 'none';
 
@@ -1138,7 +1142,7 @@ mejs.HtmlMediaElementShim = {
 
   createErrorMessage: function (playback, options, poster) {
     var htmlMediaElement = playback.htmlMediaElement,
-        errorContainer = document.createElement('div');
+        errorContainer = typeof document !== 'undefined' && document.createElement('div');
 
     errorContainer.className = 'me-cannotplay';
 
@@ -1165,7 +1169,7 @@ mejs.HtmlMediaElementShim = {
         height = 1,
         pluginid = 'me_' + playback.method + '_' + mejs.meIndex++,
         pluginMediaElement = new mejs.PluginMediaElement(pluginid, playback.method, playback.url),
-        container = document.createElement('div'),
+        container = typeof document !== 'undefined' && document.createElement('div'),
         specialIEContainer,
         node,
         initVars;
@@ -1217,7 +1221,7 @@ mejs.HtmlMediaElementShim = {
     if (playback.isVideo) {
       htmlMediaElement.parentNode.insertBefore(container, htmlMediaElement);
     } else {
-      document.body.insertBefore(container, document.body.childNodes[0]);
+      typeof document !== 'undefined' && typeof document !== 'undefined' && document.body.insertBefore(container, document.body.childNodes[0]);
     }
 
     // flash/silverlight vars
@@ -1254,7 +1258,8 @@ mejs.HtmlMediaElementShim = {
       case 'flash':
 
         if (mejs.MediaFeatures.isIE) {
-          specialIEContainer = document.createElement('div');
+          typeof document !== 'undefined' && (specialIEContainer = document.createElement('div'));
+
           container.appendChild(specialIEContainer);
           specialIEContainer.outerHTML = '<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" codebase="//download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab" ' + 'id="' + pluginid + '" width="' + width + '" height="' + height + '" class="mejs-shim">' + '<param name="movie" value="' + options.pluginPath + options.flashName + '?x=' + new Date() + '" />' + '<param name="flashvars" value="' + initVars.join('&amp;') + '" />' + '<param name="quality" value="high" />' + '<param name="bgcolor" value="#000000" />' + '<param name="wmode" value="transparent" />' + '<param name="allowScriptAccess" value="always" />' + '<param name="allowFullScreen" value="true" />' + '<param name="scale" value="default" />' + '</object>';
         } else {
@@ -1436,9 +1441,9 @@ mejs.YouTubeApi = {
   isIframeLoaded: false,
   loadIframeApi: function () {
     if (!this.isIframeStarted) {
-      var tag = document.createElement('script');
+      var tag = typeof document !== 'undefined' && document.createElement('script');
       tag.src = "//www.youtube.com/player_api";
-      var firstScriptTag = document.getElementsByTagName('script')[0];
+      var firstScriptTag = typeof document !== 'undefined' && document.getElementsByTagName('script')[0];
       firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
       this.isIframeStarted = true;
     }
@@ -1555,8 +1560,8 @@ mejs.YouTubeApi = {
         youtubeUrl = '//www.youtube.com/apiplayer?enablejsapi=1&amp;playerapiid=' + settings.pluginId + '&amp;version=3&amp;autoplay=0&amp;controls=0&amp;modestbranding=1&loop=0';
 
     if (mejs.MediaFeatures.isIE) {
+      typeof document !== 'undefined' && (specialIEContainer = document.createElement('div'));
 
-      specialIEContainer = document.createElement('div');
       settings.container.appendChild(specialIEContainer);
       specialIEContainer.outerHTML = '<object classid="clsid:D27CDB6E-AE6D-11cf-96B8-444553540000" codebase="//download.macromedia.com/pub/shockwave/cabs/flash/swflash.cab" ' + 'id="' + settings.pluginId + '" width="' + settings.width + '" height="' + settings.height + '" class="mejs-shim">' + '<param name="movie" value="' + youtubeUrl + '" />' + '<param name="wmode" value="transparent" />' + '<param name="allowScriptAccess" value="always" />' + '<param name="allowFullScreen" value="true" />' + '</object>';
     } else {
@@ -1566,7 +1571,7 @@ mejs.YouTubeApi = {
 
   flashReady: function (id) {
     var settings = this.flashPlayers[id],
-        player = document.getElementById(id),
+        player = typeof document !== 'undefined' && document.getElementById(id),
         pluginMediaElement = settings.pluginMediaElement;
 
     // hook up and return to MediaELementPlayer.success
@@ -1679,7 +1684,7 @@ typeof window !== 'undefined' && (window.MediaElement = mejs.MediaElement);
  *
  */
 
-;(function (context, exports, undefined) {
+;typeof document !== 'undefined' && function (context, exports, undefined) {
   "use strict";
 
   var i18n = {
@@ -1787,9 +1792,10 @@ typeof window !== 'undefined' && (window.MediaElement = mejs.MediaElement);
 
   // end i18n
   exports.i18n = i18n;
-})(document, mejs);
+}(document, mejs);
 
 // i18n fixes for compatibility with WordPress
+
 ;(function (exports, undefined) {
 
   "use strict";
@@ -2508,11 +2514,14 @@ if (typeof jQuery != 'undefined') {
         t.globalBind('resize', function () {
 
           // don't resize for fullscreen mode
-          if (!(t.isFullScreen || mejs.MediaFeatures.hasTrueNativeFullScreen && document.webkitIsFullScreen)) {
+
+          if (typeof document !== 'undefined' && !(t.isFullScreen || mejs.MediaFeatures.hasTrueNativeFullScreen && document.webkitIsFullScreen)) {
             t.setPlayerSize(t.width, t.height);
           }
 
           // always adjust controls
+
+
           t.setControlsSize();
         });
 
@@ -2817,8 +2826,8 @@ if (typeof jQuery != 'undefined') {
         // Firing the 'canplay' event after a timeout which isn't getting fired on some Android 4.1 devices (https://github.com/johndyer/mediaelement/issues/1305)
         if (mejs.MediaFeatures.isAndroid) {
           typeof window !== 'undefined' && (media.canplayTimeout = window.setTimeout(function () {
-            if (document.createEvent) {
-              var evt = document.createEvent('HTMLEvents');
+            if (typeof document !== 'undefined' && document.createEvent) {
+              var evt = typeof document !== 'undefined' && document.createEvent('HTMLEvents');
               evt.initEvent('canplay', true, true);
               return media.dispatchEvent(evt);
             }
@@ -3024,14 +3033,14 @@ if (typeof jQuery != 'undefined') {
     mejs.MediaElementPlayer.prototype.globalBind = function (events, data, callback) {
       var t = this;
       events = splitEvents(events, t.id);
-      if (events.d) $(document).bind(events.d, data, callback);
+      if (typeof document !== 'undefined' && events.d) $(document).bind(events.d, data, callback);
       if (typeof window !== 'undefined' && events.w) $(window).bind(events.w, data, callback);
     };
 
     mejs.MediaElementPlayer.prototype.globalUnbind = function (events, callback) {
       var t = this;
       events = splitEvents(events, t.id);
-      if (events.d) $(document).unbind(events.d, callback);
+      if (typeof document !== 'undefined' && events.d) $(document).unbind(events.d, callback);
       if (typeof window !== 'undefined' && events.w) $(window).unbind(events.w, callback);
     };
   })();
@@ -3055,7 +3064,7 @@ if (typeof jQuery != 'undefined') {
       return this;
     };
 
-    $(document).ready(function () {
+    typeof document !== 'undefined' && $(document).ready(function () {
       // auto enable using JSON attribute
       $('.mejs-player').mediaelementplayer();
     });
@@ -3800,8 +3809,8 @@ if (typeof jQuery != 'undefined') {
         var hideTimeout = null,
             supportsPointerEvents = function () {
           // TAKEN FROM MODERNIZR
-          var element = document.createElement('x'),
-              documentElement = document.documentElement,
+          var element = typeof document !== 'undefined' && document.createElement('x'),
+              documentElement = typeof document !== 'undefined' && document.documentElement,
               getComputedStyle = typeof window !== 'undefined' && window.getComputedStyle,
               supports;
           if (!('pointerEvents' in element.style)) {
@@ -4003,9 +4012,10 @@ if (typeof jQuery != 'undefined') {
       }
 
       // set it to not show scroll bars so 100% will work
-      $(document.documentElement).addClass('mejs-fullscreen');
+      typeof document !== 'undefined' && $(document.documentElement).addClass('mejs-fullscreen');
 
       // store sizing
+
       normalHeight = t.container.height();
       normalWidth = t.container.width();
 
@@ -4128,7 +4138,8 @@ if (typeof jQuery != 'undefined') {
       }
 
       // restore scroll bars to document
-      $(document.documentElement).removeClass('mejs-fullscreen');
+      typeof document !== 'undefined' && $(document.documentElement).removeClass('mejs-fullscreen');
+
 
       t.container.removeClass('mejs-container-fullscreen').width(normalWidth).height(normalHeight);
       //.css({position: '', left: '', top: '', right: '', bottom: '', overflow: 'inherit', width: normalWidth + 'px', height: normalHeight + 'px', 'z-index': 1});
