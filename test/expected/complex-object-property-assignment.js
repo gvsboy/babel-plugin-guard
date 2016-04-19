@@ -1,6 +1,6 @@
 function reset() {
   if (typeof page.container !== "undefined" && page.container.tagName === "DIV") {
-    page.container = null;
+    typeof page.container !== "undefined" && (page.container = null);
   }
 }
 

@@ -11,12 +11,12 @@ export default function({ types: t }) {
 
   const primaryWrappers = {
 
-    IfStatement(name, path) {
+    IfStatement(guardNode, path) {
       let node = path.node;
       if (!node.visited) {
         path.replaceWith(
           t.ifStatement(
-            buildGuardExpression(name, node.test),
+            buildGuardExpression(guardNode, node.test),
             node.consequent,
             node.alternate
           )
@@ -36,21 +36,21 @@ export default function({ types: t }) {
 
   const secondaryWrappers = {
 
-    ExpressionStatement(name, path) {
+    ExpressionStatement(guardNode, path) {
       path.replaceWith(
-        buildGuardExpression(name, path.node.expression)
+        buildGuardExpression(guardNode, path.node.expression)
       );
       return true;
     },
 
-    UnaryExpression(name, path) {
+    UnaryExpression(guardNode, path) {
       path.replaceWith(
-        buildGuardExpression(name, path.node)
+        buildGuardExpression(guardNode, path.node)
       );
       return true;
     },
 
-    VariableDeclarator(name, path) {
+    VariableDeclarator(guardNode, path) {
 
       let id = path.node.id;
       referencedIdentifiers.push(id.name);
@@ -58,7 +58,7 @@ export default function({ types: t }) {
       path.replaceWith(
         t.variableDeclarator(
           id,
-          buildReferencedGuardExpression(name, path.node.init)
+          buildReferencedGuardExpression(guardNode, path.node.init)
         )
       );
 
@@ -66,14 +66,14 @@ export default function({ types: t }) {
       return true;
     },
 
-    BinaryExpression(name, path) {
+    BinaryExpression(guardNode, path) {
       path.replaceWith(
-        buildGuardExpression(name, path.node)
+        buildGuardExpression(guardNode, path.node)
       );
       return true;
     },
 
-    ObjectProperty(name, path) {
+    ObjectProperty(guardNode, path) {
 
       let key = path.node.key;
       referencedIdentifiers.push(key.name);
@@ -81,7 +81,7 @@ export default function({ types: t }) {
       path.replaceWith(
         t.objectProperty(
           key,
-          buildReferencedGuardExpression(name, path.node.value)
+          buildReferencedGuardExpression(guardNode, path.node.value)
         )
       );
 
@@ -99,7 +99,7 @@ export default function({ types: t }) {
    * @param {Object} node The node to wrap in gating logic.
    * @return {Object} Builds a node resembling: typeof <name> !== "undefined" && <node>
    */
-  function buildGuardExpression(name, node) {
+  function buildGuardExpression(guardNode, node) {
 
     return t.logicalExpression(
       '&&',
@@ -107,7 +107,7 @@ export default function({ types: t }) {
         '!==',
         t.unaryExpression(
           'typeof',
-          buildVisitedIndentifier(name)
+          guardNode
         ),
         t.stringLiteral('undefined')
       ),
@@ -115,11 +115,11 @@ export default function({ types: t }) {
     );
   }
 
-  function buildReferencedGuardExpression(name, node) {
+  function buildReferencedGuardExpression(guardNode, node) {
 
     return t.logicalExpression(
       '||',
-      buildGuardExpression(name, node),
+      buildGuardExpression(guardNode, node),
       t.identifier('undefined')
     );
   }
@@ -153,18 +153,45 @@ export default function({ types: t }) {
    * @param {Object} wrapperMap The wrapper types to validate against.
    * @return {Boolean} Was a wrapper found and, if so, does it dictate we continue the search?
    */
-  function wrap(path, wrapperMap, name) {
+  function wrap(path, wrapperMap, guardNode) {
     let parent = lookup(path, Object.keys(wrapperMap));
     if (parent && !parent.node.visited) {
       setVisited(path.node);
-      name = name || path.node.name;
-      return wrapperMap[parent.type](name, parent);
+      return wrapperMap[parent.type](guardNode, parent);
     }
     return false;
   }
 
   function matches(path, identifiers = defaultIdentifiers) {
     return identifiers.indexOf(path.node.name) !== -1;
+  }
+
+
+  function findExpression(path, prop) {
+
+    let node = path.node;
+    let obj = node.object.name;
+    let type = node.type;
+
+    let parentPath = path.parentPath;
+
+    // If the parent is NOT a member expression, return the current node.
+    if (parentPath.node.type !== 'MemberExpression') {
+      return node;
+    }
+
+    // Else, if the parent's property node is NOT a referenced id, we've gone far enough.
+    else if (!referencedIdentifiers.some(id => id === parentPath.node.property.name)) {
+      return node;
+    }
+
+    // Otherwise, let's peek up.
+    else {
+      return findExpression(parentPath, prop);
+    }
+
+    // No expression was found? That can't be right.
+    return null;
   }
 
   return {
@@ -175,11 +202,14 @@ export default function({ types: t }) {
         memberExpressionPaths.push(path);
       },
 
-      // Need to check for more than just 'window'
       Identifier(path, state) {
+
         if (matches(path, state.opts.identifiers) && !path.node.visited) {
-          if (!wrap(path, primaryWrappers)) {
-            wrap(path, secondaryWrappers);
+
+          let guardNode = buildVisitedIndentifier(path.node.name);
+
+          if (!wrap(path, primaryWrappers, guardNode)) {
+            wrap(path, secondaryWrappers, guardNode);
           }
         }
       },
@@ -188,6 +218,48 @@ export default function({ types: t }) {
 
         exit() {
 
+          if (referencedIdentifiers.length) {
+
+            memberExpressionPaths.forEach((path) => {
+
+              var node = path.node;
+
+              if (!node.visited) {
+
+                let prop = node.property.name;
+
+                if (referencedIdentifiers.some(id => id === prop)) {
+                  let exp = findExpression(path, prop);
+                  if (exp) {
+                    exp = setVisited(exp);
+                    if (!wrap(path, primaryWrappers, exp)) {
+                      wrap(path, secondaryWrappers, exp);
+                    }
+                  }
+                }
+
+                else {
+                  let obj = node.object.name;
+
+                  if (referencedIdentifiers.some(id => id === obj)) {
+                    
+                    console.log('the object is referenced!', obj);
+
+                    let guardNode = buildVisitedIndentifier(obj);
+
+                    if (!wrap(path, primaryWrappers, guardNode)) {
+                      wrap(path, secondaryWrappers, guardNode);
+                    }                    
+                  }
+                }
+
+
+              }
+
+
+            });
+          }
+/*
           // If there were any references to guarded items found, we need to
           // guard against those as well. This currently only goes one level
           // deep (in other words, if a reference is made on a reference, we
@@ -210,7 +282,8 @@ export default function({ types: t }) {
 
                 // If a reference was found, wrap it.
                 if (ref) {
-                  let name = node.object.name || node.property.name;
+                  console.log(ref);
+                  let name = `${node.object.name}.${node.property.name}`;
                   if (!wrap(path, primaryWrappers, name)) {
                     wrap(path, secondaryWrappers, name);
                   }
@@ -218,7 +291,7 @@ export default function({ types: t }) {
               }
             });
           }
-
+*/
         }
 
       }
