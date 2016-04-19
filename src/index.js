@@ -3,6 +3,7 @@ export default function({ types: t }) {
   let defaultIdentifiers = [
     'window',
     'document'
+    //'location' need to fix tests first
   ];
 
   let referencedIdentifiers = [];
@@ -73,12 +74,18 @@ export default function({ types: t }) {
     },
 
     ObjectProperty(name, path) {
+
+      let key = path.node.key;
+      referencedIdentifiers.push(key.name);
+
       path.replaceWith(
         t.objectProperty(
-          path.node.key,
-          buildGuardExpression(name, path.node.value)
+          key,
+          buildReferencedGuardExpression(name, path.node.value)
         )
       );
+
+      setVisited(path.node);
       return true;
     }
 
