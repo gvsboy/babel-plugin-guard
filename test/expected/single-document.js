@@ -1,1 +1,1 @@
-var container = typeof document !== "undefined" && document.getElementById("container");
+var container = typeof document !== "undefined" && document.getElementById("container") || undefined;

@@ -1,9 +1,12 @@
 export default function({ types: t }) {
 
-  const defaultIdentifiers = [
+  let defaultIdentifiers = [
     'window',
     'document'
   ];
+
+  let referencedIdentifiers = [];
+  let memberExpressionPaths = [];
 
   const primaryWrappers = {
 
@@ -47,12 +50,18 @@ export default function({ types: t }) {
     },
 
     VariableDeclarator(name, path) {
+
+      let id = path.node.id;
+      referencedIdentifiers.push(id.name);
+
       path.replaceWith(
         t.variableDeclarator(
-          path.node.id,
-          buildGuardExpression(name, path.node.init)
+          id,
+          buildReferencedGuardExpression(name, path.node.init)
         )
       );
+
+      setVisited(path.node);
       return true;
     },
 
@@ -75,6 +84,8 @@ export default function({ types: t }) {
 
   };
 
+  let references = [];
+
   /**
    * Wraps a given node in a logical expression to gate against undeclared identifiers.
    * @param {String} name The identifier name to gate against.
@@ -94,6 +105,15 @@ export default function({ types: t }) {
         t.stringLiteral('undefined')
       ),
       node
+    );
+  }
+
+  function buildReferencedGuardExpression(name, node) {
+
+    return t.logicalExpression(
+      '||',
+      buildGuardExpression(name, node),
+      t.identifier('undefined')
     );
   }
 
@@ -126,11 +146,12 @@ export default function({ types: t }) {
    * @param {Object} wrapperMap The wrapper types to validate against.
    * @return {Boolean} Was a wrapper found and, if so, does it dictate we continue the search?
    */
-  function wrap(path, wrapperMap) {
+  function wrap(path, wrapperMap, name) {
     let parent = lookup(path, Object.keys(wrapperMap));
-    if (parent) {
+    if (parent && !parent.node.visited) {
       setVisited(path.node);
-      return wrapperMap[parent.type](path.node.name, parent);
+      name = name || path.node.name;
+      return wrapperMap[parent.type](name, parent);
     }
     return false;
   }
@@ -143,6 +164,10 @@ export default function({ types: t }) {
 
     visitor: {
 
+      MemberExpression(path) {
+        memberExpressionPaths.push(path);
+      },
+
       // Need to check for more than just 'window'
       Identifier(path, state) {
         if (matches(path, state.opts.identifiers) && !path.node.visited) {
@@ -150,6 +175,45 @@ export default function({ types: t }) {
             wrap(path, secondaryWrappers);
           }
         }
+      },
+
+      Program: {
+
+        exit() {
+
+          // If there were any references to guarded items found, we need to
+          // guard against those as well. This currently only goes one level
+          // deep (in other words, if a reference is made on a reference, we
+          // don't catch that). Perhaps you should consider explicitly listing
+          // those identifiers in the config you pass. It would have better
+          // performance that way.
+          if (referencedIdentifiers.length) {
+
+            // Member expressions are the culprits, as missing properties may
+            // be referenced.
+            memberExpressionPaths.forEach((path) => {
+
+              let node = path.node;
+
+              if (!node.visited) {
+
+                // Search for the reference within the object and property items.
+                let references = [node.object.name, node.property.name];
+                let ref = references.find(r => referencedIdentifiers.find(i => i === r));
+
+                // If a reference was found, wrap it.
+                if (ref) {
+                  let name = node.object.name || node.property.name;
+                  if (!wrap(path, primaryWrappers, name)) {
+                    wrap(path, secondaryWrappers, name);
+                  }
+                }
+              }
+            });
+          }
+
+        }
+
       }
 
     }

@@ -1,1 +1,1 @@
-var origin = typeof window !== "undefined" && window.location.origin;
+var origin = typeof window !== "undefined" && window.location.origin || undefined;
